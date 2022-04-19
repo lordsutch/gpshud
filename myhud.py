@@ -13,6 +13,7 @@ from gi.repository import Gtk, Gdk, GObject, GLib
 import gps, os, time
 import gps.clienthelpers
 import collections
+import pathlib
 from socket import error as SocketError
 from datetime import datetime
 
@@ -94,7 +95,8 @@ class HeadUpDisplay(Gtk.Window):
                 self.thin_blank_markup = "<span font='2' color='#000000'> </span>"
 
                 self.builder = Gtk.Builder()
-                self.builder.add_from_file("./gpshud.glade")
+                filename = str(pathlib.Path(__file__).parent / "gpshud.glade")
+                self.builder.add_from_file(filename)
                 self.builder.connect_signals(Handler())
                 self.builder.get_object("window1").override_background_color(
                         Gtk.StateType.NORMAL, Gdk.RGBA(0,0,0,1))
