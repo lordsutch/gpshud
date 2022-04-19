@@ -31,11 +31,11 @@ GNSS_MAP = {0: 'GPS',
 
 def format_latitude(latitude: float) -> str:
         hemisphere = 'N' if latitude >= 0 else 'S'
-        return f'{abs(latitude):.5f}° {hemisphere}'
+        return f'{abs(latitude):.5f}°\u200a{hemisphere}'
 
 def format_longitude(longitude: float) -> str:
         hemisphere = 'E' if longitude >= 0 else 'W'
-        return f'{abs(longitude):.5f}° {hemisphere}'
+        return f'{abs(longitude):.5f}°\u200a{hemisphere}'
         
 
 class Handler:
@@ -59,6 +59,7 @@ class HeadUpDisplay(Gtk.Window):
                                 '%s is not a valid speed unit'
                                 % (repr(speed_unit))
                         )
+                self.speedfactor = self.conversions[self.speed_unit]
                 self.METER_UNIT_LABEL = 'm'
                 self.FOOT_UNIT_LABEL = 'ft'
                 self.alt_conversions = {
@@ -71,7 +72,7 @@ class HeadUpDisplay(Gtk.Window):
                                 '%s is not a valid altitude unit'
                                 % (repr(altitude_unit))
                         )
-                
+                self.altfactor = self.alt_conversions[self.altitude_unit]
                 self.last_speed = 0
                 self.last_heading = 0
                 self.last_mode = 0
@@ -80,6 +81,7 @@ class HeadUpDisplay(Gtk.Window):
                 self.longitude = None
                 self.altitude = None
                 self.skyview = None
+                self.last_tpv = None
 
                 self.font_face = FONT
                 self.now_fmt = '%-I:%M %p'
@@ -153,30 +155,40 @@ class HeadUpDisplay(Gtk.Window):
 
                 if (self.skyview and hasattr(self.skyview, 'uSat') and
                     hasattr(self.skyview, 'nSat')):
-                        fixtext += f'\n{self.skyview.uSat}/{self.skyview.nSat} SVs used'
+                        fixtext += f', {self.skyview.uSat}/{self.skyview.nSat} SVs'
                         gnss_info = collections.defaultdict(list)
                         ucount = collections.defaultdict(int)
                         ncount = collections.defaultdict(int)
+                        svlist = ()
                         for sat in self.skyview.satellites:
                                 if 'gnssid' in sat:
                                         gnss_info[sat.gnssid].append(sat)
                                         ucount[sat.gnssid] += int(sat.used)
                                         ncount[sat.gnssid] += 1
-                        svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount)
+                                # svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount if ucount[gnss])
+                                svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
                         if svlist:
-                                fixtext += '\n'+'\n'.join(svlist)
+                                fixtext += '\n<span font="12">'+' '.join(svlist)+'</span>'
                         
-                self.builder.get_object("Fix").set_markup(self.fix_markup % (
-                        color, fixtext))
-
                 postext = ''
                 if self.latitude is not None and self.longitude is not None:
                         postext = (format_latitude(self.latitude) + '\n' +
                                    format_longitude(self.longitude))
+                        if self.last_tpv and hasattr(self.last_tpv, 'eph'):
+                                eph = self.last_tpv.eph*self.altfactor
+                                fixtext += f'\n2D ±\u200a{eph:.1f} {self.altitude_unit}'
                         if self.altitude:
-                                alt = self.altitude * self.alt_conversions[self.altitude_unit]
-                                postext += f'\n{alt:.1f} {self.altitude_unit}'
-                               
+                                alt = self.altitude * self.altfactor
+                                if self.last_tpv and hasattr(self.last_tpv,
+                                                             'epv'):
+                                        epv = self.last_tpv.epv*self.altfactor
+                                        postext += f'\n{alt:.1f}\u200a±\u200a{epv:.1f} {self.altitude_unit}'
+                                else:
+                                        postext += f'\n{alt:.1f} {self.altitude_unit}'
+                                                
+                self.builder.get_object("Fix").set_markup(self.fix_markup % (
+                        color, fixtext))
+
                 self.builder.get_object('Position').set_markup(self.position_markup % (color, postext))
                 return True
 
@@ -184,7 +196,7 @@ class HeadUpDisplay(Gtk.Window):
                 if self.last_mode == 0 or self.last_mode == 1:
                         return "-"
                 else:
-                        return '%.0f' % (speed * self.conversions.get(self.speed_unit))
+                        return '%.0f' % (speed * self.speedfactor)
 
         def get_direction_text(self, heading):
                 direction = ''
@@ -281,6 +293,7 @@ class Main(object):
                 self.widget.update_data()
         
         def update_speed(self, data):
+                self.widget.last_tpv = data
                 self.widget.last_mode = data['mode']
                 if  data['mode'] == 0 or data['mode'] == 1:
                         self.renew_GPS()
