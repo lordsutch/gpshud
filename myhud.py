@@ -166,7 +166,7 @@ class HeadUpDisplay(Gtk.Window):
                                         ucount[sat.gnssid] += int(sat.used)
                                         ncount[sat.gnssid] += 1
                                 # svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount if ucount[gnss])
-                                svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
+                        svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
                         if svlist:
                                 fixtext += '\n<span font="12">'+' '.join(svlist)+'</span>'
                         
