@@ -19,7 +19,7 @@ from datetime import datetime
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
 
-FONTS = ('Inter', 'Roboto', 'Open Sans')
+FONTS = ('Inter', 'Roboto', 'Piboto', 'Open Sans', 'DejaVu Sans')
 
 GNSS_MAP = {0: 'GPS',
             1: 'SBAS',
