@@ -98,6 +98,7 @@ class HeadUpDisplay(Gtk.Window):
                 self.skyview = None
                 self.last_tpv = None
 
+                self.font_face = ''
                 context = self.create_pango_context()
                 families = (fam.get_name() for fam in context.list_families())
                 for font in FONTS:
