@@ -42,7 +42,7 @@ GNSS_FLAG_ISO = {
 GNSS_FLAG = {k: ''.join(chr(0x1f1e6+ord(x)-ord('A')) for x in v)
               for k, v in GNSS_FLAG_ISO.items()}
 
-GNSS_FLAG[1] = '\u1f6f0' # SBAS
+GNSS_FLAG[1] = '\N{SATELLITE}' # SBAS
 
 def format_latitude(latitude: float) -> str:
         hemisphere = 'N' if latitude >= 0 else 'S'
