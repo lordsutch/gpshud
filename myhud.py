@@ -5,8 +5,6 @@
 
 # from __future__ import absolute_import, print_function, division
 
-FONT = 'Roboto'
-
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk, Gdk, GObject, GLib
@@ -14,11 +12,14 @@ import gps, os, time
 import gps.clienthelpers
 import collections
 import pathlib
+import dateutil.parser
 from socket import error as SocketError
 from datetime import datetime
 
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
+
+FONTS = ('Inter', 'Roboto', 'Open Sans')
 
 GNSS_MAP = {0: 'GPS',
             1: 'SBAS',
@@ -28,6 +29,20 @@ GNSS_MAP = {0: 'GPS',
             5: 'QZSS',
             6: 'GLONASS',
             }
+
+GNSS_FLAG_ISO = {
+        0: 'US',
+        2: 'EU',
+        3: 'CN',
+        4: 'IN',
+        5: 'JP',
+        6: 'RU',
+        }
+
+GNSS_FLAG = {k: ''.join(chr(0x1f1e6+ord(x)-ord('A')) for x in v)
+              for k, v in GNSS_FLAG_ISO.items()}
+
+GNSS_FLAG[1] = '\u1f6f0' # SBAS
 
 def format_latitude(latitude: float) -> str:
         hemisphere = 'N' if latitude >= 0 else 'S'
@@ -83,7 +98,13 @@ class HeadUpDisplay(Gtk.Window):
                 self.skyview = None
                 self.last_tpv = None
 
-                self.font_face = FONT
+                context = self.create_pango_context()
+                families = (fam.get_name() for fam in context.list_families())
+                for font in FONTS:
+                        if font in families:
+                                self.font_face = font
+                                break
+                
                 self.now_fmt = '%-I:%M %p'
                 self.date_fmt = '%a, %b %-d'
                 self.heading_markup = "<span font='28' face='" + self.font_face + "' color='%s'>%s</span>"
@@ -103,19 +124,17 @@ class HeadUpDisplay(Gtk.Window):
                 self.builder.get_object("window1").override_background_color(
                         Gtk.StateType.NORMAL, Gdk.RGBA(0,0,0,1))
 
-                self.builder.get_object("TopBlank").set_markup(self.thin_blank_markup)
-                self.builder.get_object("Blank1").set_markup(self.thin_blank_markup)
-                self.builder.get_object("Blank2").set_markup(self.thick_blank_markup)
-                self.builder.get_object("Blank3").set_markup(self.thick_blank_markup)
-                self.builder.get_object("Blank4").set_markup(self.thick_blank_markup)
-                self.builder.get_object("Blank5").set_markup(self.thick_blank_markup)
-                self.builder.get_object("BottomBlank").set_markup(self.thin_blank_markup)
+                # self.builder.get_object("TopBlank").set_markup(self.thin_blank_markup)
+                # self.builder.get_object("Blank1").set_markup(self.thin_blank_markup)
+                # self.builder.get_object("Blank2").set_markup(self.thick_blank_markup)
+                # self.builder.get_object("Blank3").set_markup(self.thick_blank_markup)
+                # self.builder.get_object("Blank4").set_markup(self.thick_blank_markup)
+                # self.builder.get_object("Blank5").set_markup(self.thick_blank_markup)
+                # self.builder.get_object("BottomBlank").set_markup(self.thin_blank_markup)
                 self.update_data()
 
         def update_data(self):
-                color = '#000000'
-                unitcolor = '#000000'
-                if self.last_mode == 0 or self.last_mode == 1:
+                if self.last_mode in (0, 1):
                         color = '#000000'
                         unitcolor = '#000000'
                 elif self.is_day():
@@ -131,11 +150,22 @@ class HeadUpDisplay(Gtk.Window):
                         color, self.get_speed_text(self.last_speed)))
                 self.builder.get_object("Unit").set_markup(self.unit_markup % (
                         unitcolor, self.speed_unit.upper()))
-                now = datetime.now()
-                self.builder.get_object("Date").set_markup(self.today_markup % (
-                        color, now.strftime(self.date_fmt)))
-                self.builder.get_object("Time").set_markup(self.now_markup % (
-                        color, now.strftime(self.now_fmt)))
+
+                if self.last_mode >= 2 and self.last_tpv.time:
+                        now = dateutil.parser.isoparse(self.last_tpv.time).astimezone()
+                        # print(now)
+                else:
+                        now = datetime.now()
+
+                dtstr = (self.today_markup % (color, now.strftime(self.date_fmt)) + '\n' +
+                         self.now_markup % (color, now.strftime(self.now_fmt)))
+                        
+                self.builder.get_object("Date").set_markup(dtstr)
+                self.builder.get_object("Time").set_visible(False)
+                # self.builder.get_object("Date").set_markup(self.today_markup % (
+                #         color, now.strftime(self.date_fmt)))
+                # self.builder.get_object("Time").set_markup(self.now_markup % (
+                #         color, now.strftime(self.now_fmt)))
 
                 if self.last_status:
                         fixtext = ('Unknown', 'Normal', 'DGPS',
@@ -165,8 +195,9 @@ class HeadUpDisplay(Gtk.Window):
                                         gnss_info[sat.gnssid].append(sat)
                                         ucount[sat.gnssid] += int(sat.used)
                                         ncount[sat.gnssid] += 1
-                                # svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount if ucount[gnss])
-                        svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
+                        # svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount if ucount[gnss])
+                        # svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
+                        svlist = (f'{ucount[gnss]} {GNSS_FLAG[gnss]}' for gnss in ncount if ucount[gnss])
                         if svlist:
                                 fixtext += '\n<span font="12">'+' '.join(svlist)+'</span>'
                         
@@ -176,15 +207,16 @@ class HeadUpDisplay(Gtk.Window):
                                    format_longitude(self.longitude))
                         if self.last_tpv and hasattr(self.last_tpv, 'eph'):
                                 eph = self.last_tpv.eph*self.altfactor
-                                fixtext += f'\n2D ±\u200a{eph:.1f} {self.altitude_unit}'
+                                fixtext += f'\n±\u200a{eph:.1f} {self.altitude_unit}'
+                        
                         if self.altitude:
                                 alt = self.altitude * self.altfactor
                                 if self.last_tpv and hasattr(self.last_tpv,
                                                              'epv'):
                                         epv = self.last_tpv.epv*self.altfactor
-                                        postext += f'\n{alt:.1f}\u200a±\u200a{epv:.1f} {self.altitude_unit}'
+                                        postext += f'\n{alt:#.5n}\u200a±\u200a{epv:.1f} {self.altitude_unit}'
                                 else:
-                                        postext += f'\n{alt:.1f} {self.altitude_unit}'
+                                        postext += f'\n{alt:#.5n} {self.altitude_unit}'
                                                 
                 self.builder.get_object("Fix").set_markup(self.fix_markup % (
                         color, fixtext))
@@ -193,14 +225,14 @@ class HeadUpDisplay(Gtk.Window):
                 return True
 
         def get_speed_text(self, speed):
-                if self.last_mode == 0 or self.last_mode == 1:
+                if self.last_mode in (0, 1):
                         return "-"
                 else:
                         return '%.0f' % (speed * self.speedfactor)
 
         def get_direction_text(self, heading):
                 direction = ''
-                if self.last_mode == 0 or self.last_mode == 1:
+                if self.last_mode in (0, 1):
                         direction = '-'
                 else:
                         direction = ('N', 'NE', 'E', 'SE',
