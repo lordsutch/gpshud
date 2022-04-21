@@ -27,23 +27,24 @@ import gps.clienthelpers
 
 FONTS = ('Roboto Slab', 'Inter', 'Roboto', 'Piboto', 'Open Sans', 'DejaVu Sans')
 
-GNSS_MAP = {0: 'GPS',
-            1: 'SBAS',
-            2: 'Galileo',
-            3: 'Beidou',
-            4: 'IMES',
-            5: 'QZSS',
-            6: 'GLONASS',
-            }
+GNSS_MAP = {
+    0: 'GPS',
+    1: 'SBAS',
+    2: 'Galileo',
+    3: 'Beidou',
+    4: 'IMES',
+    5: 'QZSS',
+    6: 'GLONASS',
+}
 
 GNSS_FLAG_ISO = {
-        0: 'US',
-        2: 'EU',
-        3: 'CN',
-        4: 'IN',
-        5: 'JP',
-        6: 'RU',
-        }
+    0: 'US',
+    2: 'EU',
+    3: 'CN',
+    4: 'IN',
+    5: 'JP',
+    6: 'RU',
+}
 
 GNSS_FLAG = {k: ''.join(chr(0x1f1e6+ord(x)-ord('A')) for x in v)
              for k, v in GNSS_FLAG_ISO.items()}
@@ -452,15 +453,20 @@ if __name__ == '__main__':
                               else 'metric')
 
     parser = argparse.ArgumentParser(description='Gtk+ HUD for GPSD')
-    parser.add_argument('--units', '-u', action='store', choices=(
-        'metric', 'imperial', 'traditional', 'nautical'),
-                        default=default_units_argument,
-                        help=f'units to use (default: {default_units_argument})')
-    parser.add_argument('--fullscreen', action='store_true', help='fit window to screen')
+    parser.add_argument(
+        '--units', '-u', action='store', default=default_units_argument,
+        choices=('metric', 'imperial', 'traditional', 'nautical'),
+        help=f'units to use (default: {default_units_argument})')
+    parser.add_argument('--fullscreen', action='store_true',
+                        help='fit window to screen')
     parser.add_argument('--host', action='store', default='localhost',
                         help='GPSD host to connect to (default: localhost)')
-    parser.add_argument('--port', action='store', type=int, default=gps.GPSD_PORT,
-                        help=f'GPSD port to connect to (default: {gps.GPSD_PORT})')
+    parser.add_argument(
+        '--port', action='store', type=int, default=gps.GPSD_PORT,
+        help=f'GPSD port to connect to (default: {gps.GPSD_PORT})')
+    parser.add_argument('--debug', action='store', default=0,
+                        type=int, metavar='LEVEL', nargs='+',
+                        help='enable debugging output from gps module')
     args = parser.parse_args()
 
     if args.units in ('traditional', 'imperial'):
@@ -482,6 +488,6 @@ if __name__ == '__main__':
         device=None,
         speed_unit=speed_unit,
         altitude_unit=altitude_unit,
-        debug=0,
+        debug=args.debug,
         fullscreen=args.fullscreen,
     ).run()
