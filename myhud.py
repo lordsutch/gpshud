@@ -410,18 +410,16 @@ class Main(object):
             cover.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(0,0,0,1))
             cover.fullscreen()
             cover.show()
-            while True:
-                data = daemon.next()
-                if (data['class'] == 'TPV'):
-                    if data['mode'] in (0, 1):
-                        # wait a second...
-                        time.sleep(1)
-                    else:
-                        # signal acquired, good to go
+
+            for report in daemon:
+                if report['class'] == 'TPV':
+                    self.update_speed(report)
+                    if report.mode >= 2:
+                        # 2D/3D fix, good to go
                         break
-                else:
-                    # wait a second...
-                    time.sleep(1)
+                elif report['class'] == 'SKY':
+                    self.update_sky(report)
+
             cover.destroy()
             del cover
             self.watch(daemon, self.device)
