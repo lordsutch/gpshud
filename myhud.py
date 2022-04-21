@@ -25,7 +25,7 @@ import gps.clienthelpers
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
 
-FONTS = ('Inter', 'Roboto', 'Piboto', 'Open Sans', 'DejaVu Sans')
+FONTS = ('Roboto Slab', 'Inter', 'Roboto', 'Piboto', 'Open Sans', 'DejaVu Sans')
 
 GNSS_MAP = {0: 'GPS',
             1: 'SBAS',
@@ -177,7 +177,7 @@ class HeadUpDisplay(Gtk.Window):
         if self.last_status:
             fixtext = ('Unknown', 'Normal', 'DGPS',
                        'RTK Fixed', 'RTK Floating',
-                       'Dead Reckoning', 'GNSS+DR',
+                       'DR', 'GNSS+DR',
                        'Time (surveyed)', 'Simulated',
                        'P(Y)')[self.last_status]
         else:
@@ -190,21 +190,20 @@ class HeadUpDisplay(Gtk.Window):
         else:
             fixtext = 'Unknown fix'
 
-        if (self.skyview and hasattr(self.skyview, 'uSat') and
-            hasattr(self.skyview, 'nSat')):
+        if self.skyview and 'uSat' in self.skyview and 'nSat' in self.skyview:
             fixtext += f', {self.skyview.uSat}/{self.skyview.nSat} SVs'
-            gnss_info = collections.defaultdict(list)
+            # gnss_info = collections.defaultdict(list)
             ucount = collections.defaultdict(int)
             ncount = collections.defaultdict(int)
-            svlist = ()
             for sat in self.skyview.satellites:
                 if 'gnssid' in sat:
-                    gnss_info[sat.gnssid].append(sat)
+                    # gnss_info[sat.gnssid].append(sat)
                     ucount[sat.gnssid] += int(sat.used)
                     ncount[sat.gnssid] += 1
             # svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount if ucount[gnss])
             # svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
-            svlist = (f'{ucount[gnss]} {GNSS_FLAG[gnss]}' for gnss in ncount if ucount[gnss])
+            svlist = (f'{ucount[gnss]} {GNSS_FLAG[gnss]}'
+                      for gnss in ncount if ucount[gnss])
             if svlist:
                 fixtext += '\n<span font="12">'+' '.join(svlist)+'</span>'
 
@@ -212,14 +211,13 @@ class HeadUpDisplay(Gtk.Window):
         if self.latitude is not None and self.longitude is not None:
             postext = (format_latitude(self.latitude) + '\n' +
                        format_longitude(self.longitude))
-            if self.last_tpv and hasattr(self.last_tpv, 'eph'):
+            if self.last_tpv and 'eph' in self.last_tpv:
                 eph = self.last_tpv.eph*self.altfactor
                 fixtext += f'\n±\u200a{eph:.1f} {self.altitude_unit}'
 
             if self.altitude:
                 alt = self.altitude * self.altfactor
-                if self.last_tpv and hasattr(self.last_tpv,
-                                             'epv'):
+                if self.last_tpv and 'epv' in self.last_tpv:
                     epv = self.last_tpv.epv*self.altfactor
                     postext += f'\n{alt:#.5n}\u200a±\u200a{epv:.1f} {self.altitude_unit}'
                 else:
@@ -338,17 +336,17 @@ class Main(object):
             self.renew_GPS()
         elif not self.date_set:
             self.set_date()
-        if hasattr(data, 'status'):
+        if 'status' in data:
             self.widget.last_status = data.status
-        if hasattr(data, 'speed'):
+        if 'speed' in data:
             self.widget.last_speed = data.speed
-        if hasattr(data, 'track'):
+        if 'track' in data:
             self.widget.last_heading = data.track
-        if hasattr(data, 'lat'):
+        if 'lat' in data:
             self.widget.latitude = data.lat
-        if hasattr(data, 'lon'):
+        if 'lon' in data:
             self.widget.longitude = data.lon
-        if hasattr(data, 'altHAE'):
+        if 'altHAE' in data:
             self.widget.altitude = data.altHAE
         self.widget.update_data()
 
@@ -454,7 +452,7 @@ if __name__ == '__main__':
     default_units_argument = ('imperial' if default_units.altunits == 'ft'
                               else 'metric')
 
-    parser = argparse.ArgumentParser(description='HUD for GPSD')
+    parser = argparse.ArgumentParser(description='Gtk+ HUD for GPSD')
     parser.add_argument('--units', '-u', action='store', choices=(
         'metric', 'imperial', 'traditional', 'nautical'),
                         default=default_units_argument,
