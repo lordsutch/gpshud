@@ -465,7 +465,7 @@ if __name__ == '__main__':
         '--port', action='store', type=int, default=gps.GPSD_PORT,
         help=f'GPSD port to connect to (default: {gps.GPSD_PORT})')
     parser.add_argument('--debug', action='store', default=0,
-                        type=int, metavar='LEVEL', nargs='+',
+                        type=int, metavar='LEVEL', nargs='?',
                         help='enable debugging output from gps module')
     args = parser.parse_args()
 
