@@ -289,9 +289,9 @@ class Main(object):
         self.window.connect('delete_event', self.delete_event)
         self.window.connect('destroy', self.destroy)
         self.fullscreen = fullscreen
+        self.window.show_all()
         if fullscreen:
             self.window.fullscreen()
-        self.window.show_all()
 
     def watch(self, daemon, device):
         self.daemon = daemon
@@ -406,10 +406,11 @@ class Main(object):
                     mode=gps.WATCH_ENABLE | gps.WATCH_JSON | gps.WATCH_SCALED,
                     verbose=self.debug
             )
-            cover = Gtk.Window()
-            cover.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(0,0,0,1))
-            cover.fullscreen()
-            cover.show()
+            
+            # cover = Gtk.Window()
+            # cover.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(0,0,0,1))
+            # cover.fullscreen()
+            # cover.show()
 
             for report in daemon:
                 if report['class'] == 'TPV':
@@ -420,8 +421,8 @@ class Main(object):
                 elif report['class'] == 'SKY':
                     self.update_sky(report)
 
-            cover.destroy()
-            del cover
+            # cover.destroy()
+            # del cover
             self.watch(daemon, self.device)
             Gtk.main()
         except SocketError:
