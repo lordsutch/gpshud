@@ -6,16 +6,21 @@
 # from __future__ import absolute_import, print_function, division
 
 import gi
+gi.require_version('Gdk', '3.0')
 gi.require_version('Gtk', '3.0')
-from gi.repository import Gtk, Gdk, GObject, GLib
-import gps, os, time
-import gps.clienthelpers
-import collections
-import pathlib
-import dateutil.parser
+from gi.repository import Gdk, GLib, GObject, Gtk
+
 import argparse
-from socket import error as SocketError
+import collections
+import os
+import pathlib
+import time
 from datetime import datetime
+from socket import error as SocketError
+
+import dateutil.parser
+import gps
+import gps.clienthelpers
 
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
@@ -329,9 +334,9 @@ class Main(object):
     def update_speed(self, data):
         self.widget.last_tpv = data
         self.widget.last_mode = data['mode']
-        if  data['mode'] == 0 or data['mode'] == 1:
+        if data['mode'] in (0, 1):
             self.renew_GPS()
-        elif self.date_set == False:
+        elif not self.date_set:
             self.set_date()
         if hasattr(data, 'status'):
             self.widget.last_status = data.status
@@ -410,7 +415,7 @@ class Main(object):
             while True:
                 data = daemon.next()
                 if (data['class'] == 'TPV'):
-                    if data['mode'] == 0 or data['mode'] == 1:
+                    if data['mode'] in (0, 1):
                         # wait a second...
                         time.sleep(1)
                     else:
@@ -446,12 +451,40 @@ if __name__ == '__main__':
     default_units = gps.clienthelpers.unit_adjustments()
     # print(default_units)
 
+    default_units_argument = ('imperial' if default_units.altunits == 'ft'
+                              else 'metric')
+
+    parser = argparse.ArgumentParser(description='HUD for GPSD')
+    parser.add_argument('--units', '-u', action='store', choices=(
+        'metric', 'imperial', 'traditional', 'nautical'),
+                        default=default_units_argument,
+                        help=f'units to use (default: {default_units_argument})')
+    parser.add_argument('--fullscreen', action='store_true', help='fit window to screen')
+    parser.add_argument('--host', action='store', default='localhost',
+                        help='GPSD host to connect to (default: localhost)')
+    parser.add_argument('--port', action='store', type=int, default=gps.GPSD_PORT,
+                        help=f'GPSD port to connect to (default: {gps.GPSD_PORT})')
+    args = parser.parse_args()
+
+    if args.units in ('traditional', 'imperial'):
+        speed_unit = 'mph'
+        altitude_unit = 'ft'
+    elif args.units == 'nautical':
+        speed_unit = 'knots'
+        altitude_unit = 'ft'
+    elif args.units == 'metric':
+        speed_unit = 'km/h'
+        altitude_unit = 'm'
+    else:
+        speed_unit = default_units.speedunits
+        altitude_unit = default_units.altunits
+    
     Main(
-            host='localhost',
-            port=gps.GPSD_PORT,
-            device=None,
-            speed_unit=default_units.speedunits,
-            altitude_unit=default_units.altunits,
-            debug=0,
-            fullscreen=False,
+        host=args.host,
+        port=args.port,
+        device=None,
+        speed_unit=speed_unit,
+        altitude_unit=altitude_unit,
+        debug=0,
+        fullscreen=args.fullscreen,
     ).run()
