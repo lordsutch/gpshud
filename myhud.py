@@ -283,6 +283,7 @@ class Main(object):
         self.speed_unit = speed_unit
         self.altitude_unit = altitude_unit
         self.date_set = False
+        self.daemon = None
 
         self.widget = HeadUpDisplay(speed_unit=self.speed_unit,
                                     altitude_unit=self.altitude_unit)
@@ -294,7 +295,7 @@ class Main(object):
         if fullscreen:
             self.window.fullscreen()
 
-    def watch(self, daemon, device):
+    def watch(self, daemon: gps.gps, device):
         self.daemon = daemon
         self.device = device
         GLib.io_add_watch(daemon.sock, GLib.IO_IN, self.handle_response)
@@ -303,6 +304,9 @@ class Main(object):
         return True
 
     def handle_response(self, source, condition):
+        if not self.daemon:
+            return False
+
         if self.daemon.read() == -1:
             self.handle_hangup(source, condition)
         if self.daemon.data['class'] == 'TPV':
@@ -332,8 +336,8 @@ class Main(object):
 
     def update_speed(self, data):
         self.widget.last_tpv = data
-        self.widget.last_mode = data['mode']
-        if data['mode'] in (0, 1):
+        self.widget.last_mode = data.mode
+        if data.mode in (0, 1):
             self.renew_GPS()
         elif not self.date_set:
             self.set_date()
@@ -364,7 +368,10 @@ class Main(object):
         #       self.date_set = False
 
     def renew_GPS(self):
-        del self.daemon
+        if self.daemon:
+            del self.daemon
+            self.daemon = None
+
         try:
             daemon = gps.gps(
                     host=self.host,
@@ -407,7 +414,7 @@ class Main(object):
                     mode=gps.WATCH_ENABLE | gps.WATCH_JSON | gps.WATCH_SCALED,
                     verbose=self.debug
             )
-            
+
             # cover = Gtk.Window()
             # cover.override_background_color(Gtk.StateType.NORMAL, Gdk.RGBA(0,0,0,1))
             # cover.fullscreen()
@@ -481,7 +488,7 @@ if __name__ == '__main__':
     else:
         speed_unit = default_units.speedunits
         altitude_unit = default_units.altunits
-    
+
     Main(
         host=args.host,
         port=args.port,
