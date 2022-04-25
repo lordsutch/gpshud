@@ -25,7 +25,8 @@ import gps.clienthelpers
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
 
-FONTS = ('Roboto Slab', 'Inter', 'Roboto', 'Piboto', 'Open Sans', 'DejaVu Sans')
+FONTS = ('Roboto Slab', 'Inter', 'Roboto', 'Piboto', 'Open Sans',
+         'DejaVu Sans')
 
 GNSS_MAP = {
     0: 'GPS',
@@ -49,11 +50,13 @@ GNSS_FLAG_ISO = {
 GNSS_FLAG = {k: ''.join(chr(0x1f1e6+ord(x)-ord('A')) for x in v)
              for k, v in GNSS_FLAG_ISO.items()}
 
-GNSS_FLAG[1] = '\N{SATELLITE}' # SBAS
+GNSS_FLAG[1] = '\N{SATELLITE}'  # SBAS
+
 
 def format_latitude(latitude: float) -> str:
     hemisphere = 'N' if latitude >= 0 else 'S'
     return f'{abs(latitude):.5f}°\u200a{hemisphere}'
+
 
 def format_longitude(longitude: float) -> str:
     hemisphere = 'E' if longitude >= 0 else 'W'
@@ -130,7 +133,7 @@ class HeadUpDisplay(Gtk.Window):
         self.builder.add_from_file(filename)
         self.builder.connect_signals(Handler())
         self.builder.get_object("window1").override_background_color(
-                Gtk.StateType.NORMAL, Gdk.RGBA(0,0,0,1))
+            Gtk.StateType.NORMAL, Gdk.RGBA(0, 0, 0, 1))
 
         # self.builder.get_object("TopBlank").set_markup(self.thin_blank_markup)
         # self.builder.get_object("Blank1").set_markup(self.thin_blank_markup)
@@ -165,8 +168,8 @@ class HeadUpDisplay(Gtk.Window):
         else:
             now = datetime.now()
 
-        dtstr = (self.today_markup % (color, now.strftime(self.date_fmt)) + '\n' +
-                 self.now_markup % (color, now.strftime(self.now_fmt)))
+        dtstr = (self.today_markup % (color, now.strftime(self.date_fmt)) +
+                 '\n' + self.now_markup % (color, now.strftime(self.now_fmt)))
 
         self.builder.get_object("Date").set_markup(dtstr)
         self.builder.get_object("Time").set_visible(False)
@@ -176,11 +179,9 @@ class HeadUpDisplay(Gtk.Window):
         #         color, now.strftime(self.now_fmt)))
 
         if self.last_status:
-            fixtext = ('Unknown', 'Normal', 'DGPS',
-                       'RTK Fixed', 'RTK Floating',
-                       'DR', 'GNSS+DR',
-                       'Time (surveyed)', 'Simulated',
-                       'P(Y)')[self.last_status]
+            fixtext = ('Unknown', 'Normal', 'DGPS', 'RTK Fixed',
+                       'RTK Floating', 'DR', 'GNSS+DR', 'Time (surveyed)',
+                       'Simulated', 'P(Y)')[self.last_status]
         else:
             fixtext = ''
 
@@ -243,22 +244,6 @@ class HeadUpDisplay(Gtk.Window):
         else:
             direction = ('N', 'NE', 'E', 'SE',
                          'S', 'SW', 'W', 'NW', 'N')[int((heading+22.5)//45)]
-        # elif (heading >= 22.5) and (heading < 67.5):
-        #         direction = 'NE'
-        # elif (heading >= 67.5) and (heading < 112.5):
-        #         direction = 'E'
-        # elif (heading >= 112.5) and (heading < 157.5):
-        #         direction = 'SE'
-        # elif (heading >= 157.5) and (heading < 202.5):
-        #         direction = 'S'
-        # elif (heading >= 202.5) and (heading < 247.5):
-        #         direction = 'SW'
-        # elif (heading >= 247.5) and (heading < 292.5):
-        #         direction = 'W'
-        # elif (heading >= 292.5) and (heading < 337.5):
-        #         direction = 'NW'
-        # else:
-        #         direction = 'N'
         return direction
 
     def is_day(self):
@@ -332,7 +317,7 @@ class Main(object):
     def update_sky(self, data):
         # print(data)
         self.widget.skyview = data
-        self.widget.update_data()
+        # self.widget.update_data()
 
     def update_speed(self, data):
         self.widget.last_tpv = data
