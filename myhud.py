@@ -21,6 +21,7 @@ from socket import error as SocketError
 import dateutil.parser
 import gps
 import gps.clienthelpers
+import astral
 
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
@@ -66,6 +67,7 @@ def format_longitude(longitude: float) -> str:
 class Handler:
     def onDestroy(self, *args):
         Gtk.main_quit()
+
 
 class HeadUpDisplay(Gtk.Window):
     def __init__(self, speed_unit=None, altitude_unit=None):
@@ -238,7 +240,6 @@ class HeadUpDisplay(Gtk.Window):
             return '%.0f' % (speed * self.speedfactor)
 
     def get_direction_text(self, heading):
-        direction = ''
         if self.last_mode in (0, 1):
             direction = '-'
         else:
@@ -247,7 +248,22 @@ class HeadUpDisplay(Gtk.Window):
         return direction
 
     def is_day(self):
-        return True
+        solar_tz = datetime.timezone(datetime.timedelta(
+            hours=(self.longitude+7.5) // 15))
+        loc = astral.Observer(latitude=self.latitude, longitude=self.longitude)
+        now = datetime.now(solar_tz)
+        date = now.date()
+        try:
+            sunrise, sunset = astral.sun.daylight(loc, date, solar_tz)
+            return sunrise <= now <= sunset
+        except ValueError:
+            noon = astral.sun.noon(loc, date=date)
+            if astral.sun.elevation(noon) < 0:
+                # Sun is not up at noon, so it's winter
+                return False
+            return True
+        return False
+    
         # l = Location()
         # l.latitude = self.latitude
         # l.longitude = self.longitude
