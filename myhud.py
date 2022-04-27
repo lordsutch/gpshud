@@ -15,13 +15,14 @@ import collections
 import os
 import pathlib
 import time
-from datetime import datetime
+import datetime
 from socket import error as SocketError
 
 import dateutil.parser
 import gps
 import gps.clienthelpers
 import astral
+import astral.sun
 
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
@@ -168,7 +169,7 @@ class HeadUpDisplay(Gtk.Window):
             now = dateutil.parser.isoparse(self.last_tpv.time).astimezone()
             # print(now)
         else:
-            now = datetime.now()
+            now = datetime.datetime.now()
 
         dtstr = (self.today_markup % (color, now.strftime(self.date_fmt)) +
                  '\n' + self.now_markup % (color, now.strftime(self.now_fmt)))
@@ -251,7 +252,7 @@ class HeadUpDisplay(Gtk.Window):
         solar_tz = datetime.timezone(datetime.timedelta(
             hours=(self.longitude+7.5) // 15))
         loc = astral.Observer(latitude=self.latitude, longitude=self.longitude)
-        now = datetime.now(solar_tz)
+        now = datetime.datetime.now(solar_tz)
         date = now.date()
         try:
             sunrise, sunset = astral.sun.daylight(loc, date, solar_tz)
