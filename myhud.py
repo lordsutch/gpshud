@@ -222,7 +222,7 @@ class HeadUpDisplay(Gtk.Window):
                 min_ss, max_ss = min(strengths), max(strengths)
                 mean_ss = statistics.fmean(strengths)
                 sd_ss = statistics.stdev(strengths)
-                fixtext += f'\n<span font="10">SNR: {min_ss:.0f}–{max_ss:.0f} \U0001D465\u0305{mean_ss:.1f} s:{sd_ss:.1f}</span>'
+                fixtext += f'\n<span font="10">SNR: {min_ss:.0f}–{max_ss:.0f} \U0001D465\u0305={mean_ss:.1f} \U0001D460={sd_ss:.1f}</span>'
 
         postext = ''
         if self.latitude is not None and self.longitude is not None:
