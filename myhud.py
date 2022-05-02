@@ -261,6 +261,9 @@ class HeadUpDisplay(Gtk.Window):
         return direction
 
     def is_day(self):
+        if self.longitude is None or self.latitude is None:
+            return True
+
         solar_tz = datetime.timezone(datetime.timedelta(
             hours=(self.longitude+7.5) // 15))
         loc = astral.Observer(latitude=self.latitude, longitude=self.longitude)
