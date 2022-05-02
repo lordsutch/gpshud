@@ -16,6 +16,7 @@ import os
 import pathlib
 import time
 import datetime
+import statistics
 from socket import error as SocketError
 
 import dateutil.parser
@@ -148,15 +149,16 @@ class HeadUpDisplay(Gtk.Window):
         self.update_data()
 
     def update_data(self):
-        if self.last_mode in (0, 1):
-            color = '#000000'
-            unitcolor = '#000000'
-        elif self.is_day():
+        if self.is_day():
             color = '#FFFFFF'
             unitcolor = '#888888'
         else:
             color = '#BBBBBB'
             unitcolor = '#666666'
+
+        # if self.last_mode in (0, 1):
+        #     color = '#000000'
+        #     unitcolor = '#000000'
 
         self.builder.get_object("Heading").set_markup(self.heading_markup % (
                 color, self.get_direction_text(self.last_heading)))
@@ -200,17 +202,27 @@ class HeadUpDisplay(Gtk.Window):
             # gnss_info = collections.defaultdict(list)
             ucount = collections.defaultdict(int)
             ncount = collections.defaultdict(int)
+            sigstrength = collections.defaultdict(float)
             for sat in self.skyview.satellites:
                 if 'gnssid' in sat:
                     # gnss_info[sat.gnssid].append(sat)
                     ucount[sat.gnssid] += int(sat.used)
                     ncount[sat.gnssid] += 1
+                    if 'ss' in sat:
+                        sigstrength[sat.PRN] = sat.ss
+
             # svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount if ucount[gnss])
             # svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
             svlist = (f'{ucount[gnss]} {GNSS_FLAG[gnss]}'
-                      for gnss in ncount if ucount[gnss])
+                      for gnss in ucount if ucount[gnss] > 0)
             if svlist:
                 fixtext += '\n<span font="12">'+' '.join(svlist)+'</span>'
+            if sigstrength:
+                strengths = tuple(sigstrength.values())
+                min_ss, max_ss = min(strengths), max(strengths)
+                mean_ss = statistics.fmean(strengths)
+                sd_ss = statistics.stdev(strengths)
+                fixtext += f'\n<span font="10">SNR: {min_ss:.0f}–{max_ss:.0f} \U0001D465\u0305{mean_ss:.1f} s:{sd_ss:.1f}</span>'
 
         postext = ''
         if self.latitude is not None and self.longitude is not None:
