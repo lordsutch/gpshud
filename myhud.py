@@ -16,6 +16,7 @@ import os
 import pathlib
 import time
 import datetime
+import statistics
 from socket import error as SocketError
 
 import dateutil.parser
@@ -148,15 +149,16 @@ class HeadUpDisplay(Gtk.Window):
         self.update_data()
 
     def update_data(self):
-        if self.last_mode in (0, 1):
-            color = '#000000'
-            unitcolor = '#000000'
-        elif self.is_day():
+        if self.is_day():
             color = '#FFFFFF'
             unitcolor = '#888888'
         else:
             color = '#BBBBBB'
             unitcolor = '#666666'
+
+        # if self.last_mode in (0, 1):
+        #     color = '#000000'
+        #     unitcolor = '#000000'
 
         self.builder.get_object("Heading").set_markup(self.heading_markup % (
                 color, self.get_direction_text(self.last_heading)))
@@ -200,17 +202,42 @@ class HeadUpDisplay(Gtk.Window):
             # gnss_info = collections.defaultdict(list)
             ucount = collections.defaultdict(int)
             ncount = collections.defaultdict(int)
+            sigstrength = collections.defaultdict(float)
+            usedsigstrength = collections.defaultdict(float)
             for sat in self.skyview.satellites:
                 if 'gnssid' in sat:
                     # gnss_info[sat.gnssid].append(sat)
                     ucount[sat.gnssid] += int(sat.used)
                     ncount[sat.gnssid] += 1
+                    if 'ss' in sat:
+                        sigstrength[sat.PRN] = sat.ss
+                        if sat.used:
+                            usedsigstrength[sat.PRN] = sat.ss
+
             # svlist = (f'{GNSS_MAP[gnss][:2]}: {ucount[gnss]}/{ncount[gnss]}' for gnss in ncount if ucount[gnss])
             # svlist = (f'{GNSS_MAP[gnss][:2]}' for gnss in ncount if ucount[gnss])
-            svlist = (f'{ucount[gnss]} {GNSS_FLAG[gnss]}'
-                      for gnss in ncount if ucount[gnss])
+            svlist = tuple(f'{ucount[gnss]} {GNSS_FLAG[gnss]}'
+                           for gnss in ucount if ucount[gnss] > 0)
             if svlist:
                 fixtext += '\n<span font="12">'+' '.join(svlist)+'</span>'
+            if sigstrength:
+                strengths = tuple(sigstrength.values())
+                min_ss, max_ss = min(strengths), max(strengths)
+                fixtext += f'\n<span font="10">All SNR: {min_ss:.0f}–{max_ss:.0f}'
+                if len(strengths) > 1:
+                    mean_ss = statistics.fmean(strengths)
+                    sd_ss = statistics.stdev(strengths)
+                    fixtext += f', \U0001D465\u0305={mean_ss:.1f}, \U0001D460={sd_ss:.1f}'
+                fixtext += '</span>'
+            if usedsigstrength:
+                strengths = tuple(usedsigstrength.values())
+                min_ss, max_ss = min(strengths), max(strengths)
+                fixtext += f'\n<span font="10">Used SNR: {min_ss:.0f}–{max_ss:.0f}'
+                if len(strengths) > 1:
+                    mean_ss = statistics.fmean(strengths)
+                    sd_ss = statistics.stdev(strengths)
+                    fixtext += f', \U0001D465\u0305={mean_ss:.1f}, \U0001D460={sd_ss:.1f}'
+                fixtext += '</span>'
 
         postext = ''
         if self.latitude is not None and self.longitude is not None:
@@ -218,7 +245,7 @@ class HeadUpDisplay(Gtk.Window):
                        format_longitude(self.longitude))
             if self.last_tpv and 'eph' in self.last_tpv:
                 eph = self.last_tpv.eph*self.altfactor
-                fixtext += f'\n±\u200a{eph:.1f} {self.altitude_unit}'
+                fixtext += f'\nCEP: ±\u200a{eph:.1f} {self.altitude_unit}'
 
             if self.altitude:
                 alt = self.altitude * self.altfactor
@@ -249,6 +276,9 @@ class HeadUpDisplay(Gtk.Window):
         return direction
 
     def is_day(self):
+        if self.longitude is None or self.latitude is None:
+            return True
+
         solar_tz = datetime.timezone(datetime.timedelta(
             hours=(self.longitude+7.5) // 15))
         loc = astral.Observer(latitude=self.latitude, longitude=self.longitude)
@@ -334,14 +364,15 @@ class Main(object):
     def update_sky(self, data):
         # print(data)
         self.widget.skyview = data
-        # self.widget.update_data()
+        self.widget.update_data()
 
     def update_speed(self, data):
         self.widget.last_tpv = data
         self.widget.last_mode = data.mode
-        if data.mode in (0, 1):
-            self.renew_GPS()
-        elif not self.date_set:
+        # if data.mode in (0, 1):
+        #     self.renew_GPS()
+
+        if not self.date_set:
             self.set_date()
         if 'status' in data:
             self.widget.last_status = data.status
@@ -358,7 +389,7 @@ class Main(object):
         self.widget.update_data()
 
     def set_date(self):
-        pass
+        return
         # if self.daemon.utc != None and self.daemon.utc != '':
         #       gpsutc = self.daemon.utc[0:4] + self.daemon.utc[5:7] + self.daemon.utc[8:10] + ' ' + self.daemon.utc[11:19]
         #       ret_val = os.system('sudo date -u --set="%s"' % gpsutc)
@@ -425,7 +456,7 @@ class Main(object):
             for report in daemon:
                 if report['class'] == 'TPV':
                     self.update_speed(report)
-                    if report.mode >= 2:
+                    if report.mode >= 0:
                         # 2D/3D fix, good to go
                         break
                 elif report['class'] == 'SKY':
