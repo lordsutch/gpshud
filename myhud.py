@@ -307,7 +307,7 @@ class HeadUpDisplay(Gtk.Window):
 class Main(object):
     def __init__(self, host='localhost', port=gps.GPSD_PORT, device=None,
                  debug=0, speed_unit=None, altitude_unit=None,
-                 fullscreen=True):
+                 fullscreen=True, maximize=False):
         self.host = host
         self.port = port
         self.device = device
@@ -323,9 +323,12 @@ class Main(object):
         self.window.connect('delete_event', self.delete_event)
         self.window.connect('destroy', self.destroy)
         self.fullscreen = fullscreen
+        self.maximize = maximize
         self.window.show_all()
         if fullscreen:
             self.window.fullscreen()
+        elif maximize:
+            self.window.maximize()
 
     def watch(self, daemon: gps.gps, device):
         self.daemon = daemon
@@ -453,14 +456,14 @@ class Main(object):
             # cover.fullscreen()
             # cover.show()
 
-            for report in daemon:
-                if report['class'] == 'TPV':
-                    self.update_speed(report)
-                    if report.mode >= 0:
-                        # 2D/3D fix, good to go
-                        break
-                elif report['class'] == 'SKY':
-                    self.update_sky(report)
+            # for report in daemon:
+            #     if report['class'] == 'TPV':
+            #         self.update_speed(report)
+            #         if report.mode >= 0:
+            #             # 2D/3D fix, good to go
+            #             break
+            #     elif report['class'] == 'SKY':
+            #         self.update_sky(report)
 
             # cover.destroy()
             # del cover
@@ -499,6 +502,8 @@ if __name__ == '__main__':
         help=f'units to use (default: {default_units_argument})')
     parser.add_argument('--fullscreen', action='store_true',
                         help='fit window to screen')
+    parser.add_argument('--maximize', action='store_true',
+                        help='maximize window')
     parser.add_argument('--host', action='store', default='localhost',
                         help='GPSD host to connect to (default: localhost)')
     parser.add_argument(
@@ -530,4 +535,5 @@ if __name__ == '__main__':
         altitude_unit=altitude_unit,
         debug=args.debug,
         fullscreen=args.fullscreen,
+        maximize=args.maximize,
     ).run()
