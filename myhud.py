@@ -28,8 +28,8 @@ import astral.sun
 # Need to adapt to new calling conventions
 # from astral import Astral, Location
 
-FONTS = ('Roboto Slab', 'Inter', 'Roboto', 'Piboto', 'Open Sans',
-         'DejaVu Sans')
+FONTS = ('Roboto Slab', 'Inter', 'Roboto', 'Source Sans Pro',
+         'Piboto', 'Open Sans', 'DejaVu Sans')
 
 GNSS_MAP = {
     0: 'GPS',
@@ -384,8 +384,8 @@ class Main(object):
             self.widget.latitude = data.lat
         if 'lon' in data:
             self.widget.longitude = data.lon
-        if 'altHAE' in data:
-            self.widget.altitude = data.altHAE
+        if 'altMSL' in data:
+            self.widget.altitude = data.altMSL
         self.widget.update_data()
 
     def set_date(self):
