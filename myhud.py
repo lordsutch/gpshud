@@ -344,6 +344,8 @@ class Main(object):
 
         if self.daemon.read() == -1:
             self.handle_hangup(source, condition)
+        if self.debug:
+            print('Response:', self.daemon.data, file=sys.stderr)
         if self.daemon.data['class'] == 'TPV':
             self.update_speed(self.daemon.data)
         elif self.daemon.data['class'] == 'SKY':
@@ -456,14 +458,11 @@ class Main(object):
             # cover.fullscreen()
             # cover.show()
 
-            # for report in daemon:
-            #     if report['class'] == 'TPV':
-            #         self.update_speed(report)
-            #         if report.mode >= 0:
-            #             # 2D/3D fix, good to go
-            #             break
-            #     elif report['class'] == 'SKY':
-            #         self.update_sky(report)
+            for report in daemon:
+                if report['class'] == 'TPV':
+                    self.update_speed(report)
+                elif report['class'] == 'SKY':
+                    self.update_sky(report)
 
             # cover.destroy()
             # del cover
