@@ -458,7 +458,8 @@ class Main(object):
             # cover.fullscreen()
             # cover.show()
 
-            for report in daemon:
+            while daemon.waiting():
+                report = next(daemon)
                 if report['class'] == 'TPV':
                     self.update_speed(report)
                 elif report['class'] == 'SKY':
